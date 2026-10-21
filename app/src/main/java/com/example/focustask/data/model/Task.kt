@@ -1,5 +1,9 @@
+
 package com.example.focustask.data.model
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 // Define que datos contiene una tarea
 data class Task(
     val id: String,
@@ -10,3 +14,4 @@ data class Task(
     val dueDate: String?,
     val isCompleted: Boolean = false
 )
+

@@ -1,6 +1,8 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    // Datastore
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -51,4 +53,13 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
+    // Icons
+    implementation("androidx.compose.material:material-icons-extended")
+    // Datastore
+    implementation(libs.androidx.datastore.preferences)
+    implementation(libs.kotlinx.serialization.json)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    // Navegación
+    implementation("androidx.navigation:navigation-compose:2.10.2")
+
 }
