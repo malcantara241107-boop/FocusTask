@@ -1,6 +1,10 @@
 
 package com.example.focustask.ui
 
+// Importaciones de Paquetes
+import com.example.focustask.viewmodel.TaskDateFilter
+import com.example.focustask.viewmodel.TaskPriorityFilter
+
 // Colores Principales
 import com.example.focustask.ui.theme.NavyBackground
 import com.example.focustask.ui.theme.Turquoise
@@ -27,6 +31,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -45,6 +55,9 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.getValue
@@ -62,6 +75,7 @@ import com.example.focustask.data.model.Task
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.ui.res.painterResource
 import com.example.focustask.ui.theme.PlusJakartaSansFamily
@@ -101,8 +115,26 @@ fun TaskListScreen(
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    // Estado temporal para probar interacciones.
-    // Después lo sustituiremos por el estado del ViewModel.
+    var showFiltersDialog by rememberSaveable {
+        mutableStateOf(false)
+    }
+
+    var draftCategory by rememberSaveable {
+        mutableStateOf<String?>(null)
+    }
+
+    var draftDate by rememberSaveable {
+        mutableStateOf(TaskDateFilter.ANY)
+    }
+
+    var draftPriority by rememberSaveable {
+        mutableStateOf(TaskPriorityFilter.ALL)
+    }
+
+    var draftStatus by rememberSaveable {
+        mutableStateOf(TaskStatusFilter.ALL)
+    }
+
     var isHeaderExpanded by rememberSaveable {
         mutableStateOf(false)
     }
@@ -274,39 +306,98 @@ fun TaskListScreen(
                         )
                     )
 
-
-                    Row(
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(
-                                horizontal = 16.dp,
-                                vertical = 10.dp
-                            ),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            .padding(horizontal = 20.dp, vertical = 10.dp)
                     ) {
-                        FilterButton(
-                            text = "Todas",
-                            selected = uiState.selectedStatus == TaskStatusFilter.ALL,
+                        OutlinedButton(
                             onClick = {
-                                viewModel.setStatusFilter(TaskStatusFilter.ALL)
-                            }
-                        )
+                                draftCategory = uiState.selectedCategory
+                                draftDate = uiState.selectedDate
+                                draftPriority = uiState.selectedPriority
+                                draftStatus = uiState.selectedStatus
+                                showFiltersDialog = true
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = Turquoise
+                            )
+                        ) {
+                            Text(
+                                text = "⚙ Filtros",
+                                fontFamily = PlusJakartaSansFamily,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
 
-                        FilterButton(
-                            text = "Pendientes",
-                            selected = uiState.selectedStatus == TaskStatusFilter.PENDING,
-                            onClick = {
-                                viewModel.setStatusFilter(TaskStatusFilter.PENDING)
+                        val activeFilters = buildList {
+                            if (uiState.selectedCategory != null) {
+                                add(
+                                    uiState.selectedCategory!! to {
+                                        viewModel.setCategory(null)
+                                    }
+                                )
                             }
-                        )
 
-                        FilterButton(
-                            text = "Completadas",
-                            selected = uiState.selectedStatus == TaskStatusFilter.COMPLETED,
-                            onClick = {
-                                viewModel.setStatusFilter(TaskStatusFilter.COMPLETED)
+                            if (uiState.selectedDate != TaskDateFilter.ANY) {
+                                val label = when (uiState.selectedDate) {
+                                    TaskDateFilter.TODAY -> "Hoy"
+                                    TaskDateFilter.TOMORROW -> "Mañana"
+                                    TaskDateFilter.THIS_WEEK -> "Esta semana"
+                                    TaskDateFilter.THIS_MONTH -> "Este mes"
+                                    TaskDateFilter.NO_DATE -> "Sin fecha"
+                                    TaskDateFilter.ANY -> ""
+                                }
+
+                                add(label to {
+                                    viewModel.setDateFilter(TaskDateFilter.ANY)
+                                })
                             }
-                        )
+
+                            if (uiState.selectedPriority != TaskPriorityFilter.ALL) {
+                                val label = when (uiState.selectedPriority) {
+                                    TaskPriorityFilter.LOW -> "Baja"
+                                    TaskPriorityFilter.NORMAL -> "Normal"
+                                    TaskPriorityFilter.MEDIUM -> "Media"
+                                    TaskPriorityFilter.HIGH -> "Alta"
+                                    TaskPriorityFilter.ALL -> ""
+                                }
+
+                                add(label to {
+                                    viewModel.setPriorityFilter(TaskPriorityFilter.ALL)
+                                })
+                            }
+
+                            if (uiState.selectedStatus != TaskStatusFilter.ALL) {
+                                val label = when (uiState.selectedStatus) {
+                                    TaskStatusFilter.PENDING -> "Pendientes"
+                                    TaskStatusFilter.COMPLETED -> "Completadas"
+                                    TaskStatusFilter.ALL -> ""
+                                }
+
+                                add(label to {
+                                    viewModel.setStatusFilter(TaskStatusFilter.ALL)
+                                })
+                            }
+                        }
+
+                        if (activeFilters.isNotEmpty()) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState())
+                                    .padding(top = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                activeFilters.forEach { (label, onRemove) ->
+                                    ActiveFilterChip(
+                                        text = label,
+                                        onRemove = onRemove
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -450,6 +541,256 @@ fun TaskListScreen(
             }
         }
     }
+
+    if (showFiltersDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showFiltersDialog = false
+            },
+            title = {
+                Text("Filtros de tareas")
+            },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 420.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Categoría
+                    Text(
+                        text = "Categoría",
+                        color = Turquoise,
+                        fontFamily = QuicksandFamily,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    val categories = listOf(
+                        null to "Todas",
+                        "Universidad" to "Universidad",
+                        "Estudio" to "Estudio",
+                        "Proyecto" to "Proyecto",
+                        "Personal" to "Personal"
+                    )
+
+                    categories.forEach { (category, label) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    draftCategory = category
+                                },
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = draftCategory == category,
+                                onClick = {
+                                    draftCategory = category
+                                },
+                                colors = RadioButtonDefaults.colors(
+                                    selectedColor = Turquoise
+                                )
+                            )
+
+                            Text(
+                                text = label,
+                                color = MainText
+                            )
+                        }
+                    }
+
+                    HorizontalDivider(color = SecondaryText)
+
+                    // Estado
+                    Text(
+                        text = "Estado",
+                        color = Turquoise,
+                        fontFamily = QuicksandFamily,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    val statuses = listOf(
+                        TaskStatusFilter.ALL to "Todas",
+                        TaskStatusFilter.PENDING to "Pendientes",
+                        TaskStatusFilter.COMPLETED to "Completadas"
+                    )
+
+                    statuses.forEach { (status, label) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    draftStatus = status
+                                },
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = draftStatus == status,
+                                onClick = {
+                                    draftStatus = status
+                                },
+                                colors = RadioButtonDefaults.colors(
+                                    selectedColor = Turquoise
+                                )
+                            )
+
+                            Text(
+                                text = label,
+                                color = MainText
+                            )
+                        }
+                    }
+
+                    HorizontalDivider(color = SecondaryText)
+
+                    // Fecha
+                    Text(
+                        text = "Fecha de entrega",
+                        color = Turquoise,
+                        fontFamily = QuicksandFamily,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    val dates = listOf(
+                        TaskDateFilter.ANY to "Cualquier fecha",
+                        TaskDateFilter.TODAY to "Hoy",
+                        TaskDateFilter.TOMORROW to "Mañana",
+                        TaskDateFilter.THIS_WEEK to "Esta semana",
+                        TaskDateFilter.THIS_MONTH to "Este mes",
+                        TaskDateFilter.NO_DATE to "Sin fecha"
+                    )
+
+                    dates.forEach { (date, label) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    draftDate = date
+                                },
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = draftDate == date,
+                                onClick = {
+                                    draftDate = date
+                                },
+                                colors = RadioButtonDefaults.colors(
+                                    selectedColor = Turquoise
+                                )
+                            )
+
+                            Text(
+                                text = label,
+                                color = MainText
+                            )
+                        }
+                    }
+
+                    HorizontalDivider(color = SecondaryText)
+
+                    // Prioridad
+                    Text(
+                        text = "Prioridad",
+                        color = Turquoise,
+                        fontFamily = QuicksandFamily,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    val priorities = listOf(
+                        TaskPriorityFilter.ALL to "Todas",
+                        TaskPriorityFilter.LOW to "Baja",
+                        TaskPriorityFilter.NORMAL to "Normal",
+                        TaskPriorityFilter.MEDIUM to "Media",
+                        TaskPriorityFilter.HIGH to "Alta"
+                    )
+
+                    priorities.forEach { (priority, label) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    draftPriority = priority
+                                },
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = draftPriority == priority,
+                                onClick = {
+                                    draftPriority = priority
+                                },
+                                colors = RadioButtonDefaults.colors(
+                                    selectedColor = Turquoise
+                                )
+                            )
+
+                            Text(
+                                text = label,
+                                color = MainText
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.setCategory(draftCategory)
+                        viewModel.setDateFilter(draftDate)
+                        viewModel.setPriorityFilter(draftPriority)
+                        viewModel.setStatusFilter(draftStatus)
+
+                        showFiltersDialog = false
+                    }
+                ) {
+                    Text(
+                        text = "Aplicar filtros",
+                        color = Turquoise
+                    )
+                }
+            },
+            dismissButton = {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    TextButton(
+                        onClick = {
+                            draftCategory = null
+                            draftDate = TaskDateFilter.ANY
+                            draftPriority = TaskPriorityFilter.ALL
+                            draftStatus = TaskStatusFilter.ALL
+
+                            viewModel.setCategory(null)
+                            viewModel.setDateFilter(TaskDateFilter.ANY)
+                            viewModel.setPriorityFilter(TaskPriorityFilter.ALL)
+                            viewModel.setStatusFilter(TaskStatusFilter.ALL)
+
+                            showFiltersDialog = false
+                        }
+                    ) {
+                        Text(
+                            text = "Limpiar filtros",
+                            color = SecondaryText
+                        )
+                    }
+
+                    TextButton(
+                        onClick = {
+                            showFiltersDialog = false
+                        }
+                    ) {
+                        Text(
+                            text = "Cancelar",
+                            color = Turquoise
+                        )
+                    }
+                }
+            },
+            containerColor = NavyBackground,
+            titleContentColor = MainText,
+            textContentColor = SecondaryText
+        )
+    }
 }
 
 @Composable
@@ -581,6 +922,35 @@ private fun FilterButton(
         border = BorderStroke(
             width = if (selected) 2.dp else 1.dp,
             color = if (selected) MainText else NavyBorder
+        )
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ActiveFilterChip(
+    text: String,
+    onRemove: () -> Unit
+) {
+    FilterChip(
+        selected = true,
+        onClick = onRemove,
+        label = {
+            Text(
+                text = "$text  ×",
+                fontSize = 12.sp,
+                fontFamily = QuicksandFamily,
+                fontWeight = FontWeight.Normal
+            )
+        },
+        shape = RoundedCornerShape(7.dp),
+        colors = FilterChipDefaults.filterChipColors(
+            selectedContainerColor = Turquoise,
+            selectedLabelColor = NavyBackground
+        ),
+        border = BorderStroke(
+            width = 1.dp,
+            color = MainText
         )
     )
 }

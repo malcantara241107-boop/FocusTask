@@ -10,12 +10,35 @@ enum class TaskSortOption {
     PRIORITY, DUE_DATE
 }
 
+enum class TaskDateFilter {
+    ANY,
+    TODAY,
+    TOMORROW,
+    THIS_WEEK,
+    THIS_MONTH,
+    NO_DATE
+}
+
+enum class TaskPriorityFilter {
+    ALL,
+    LOW,
+    NORMAL,
+    MEDIUM,
+    HIGH
+}
+
+
 data class TaskListUiState(
     val allTasks: List<Task> = emptyList(),
     val tasks: List<Task> = emptyList(),
     val searchQuery: String = "",
+
+    //Filtros
     val selectedCategory: String? = null,
     val selectedStatus: TaskStatusFilter = TaskStatusFilter.ALL,
+    val selectedDate: TaskDateFilter = TaskDateFilter.ANY,
+    val selectedPriority: TaskPriorityFilter = TaskPriorityFilter.ALL,
+
     val sortOption: TaskSortOption = TaskSortOption.DUE_DATE,
     val isLoading: Boolean = true,
     val errorMessage: String? = null
