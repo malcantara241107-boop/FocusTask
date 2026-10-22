@@ -26,6 +26,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.clickable
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -96,6 +97,7 @@ fun TaskListScreen(
     onAddTask: () -> Unit,
     onEditTask: (Task) -> Unit,
     onDeleteTask: (Task) -> Unit,
+    onViewTask: (Task) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -419,6 +421,7 @@ fun TaskListScreen(
                         items = visibleTasks,
                         key = { it.id }
                     ) { task ->
+
                         TaskCard(
                             task = task,
                             onCompletedChange = { isCompleted ->
@@ -432,8 +435,12 @@ fun TaskListScreen(
                             },
                             onDelete = {
                                 onDeleteTask(task)
+                            },
+                            onClick = {
+                                onViewTask(task)
                             }
                         )
+
                     }
 
                     item {
@@ -583,7 +590,8 @@ private fun TaskCard(
     task: Task,
     onCompletedChange: (Boolean) -> Unit,
     onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onClick: () -> Unit
 ) {
     val priorityColor = when (task.priority) {
         0 -> PriorityLow
@@ -602,7 +610,9 @@ private fun TaskCard(
     }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
         shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (task.isCompleted) {

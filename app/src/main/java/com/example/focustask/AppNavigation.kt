@@ -15,6 +15,7 @@ import androidx.navigation.compose.rememberNavController
 
 import com.example.focustask.data.model.Task
 import com.example.focustask.ui.AddTaskScreen
+import com.example.focustask.ui.TaskDetailScreen
 import com.example.focustask.ui.TaskListScreen
 import com.example.focustask.viewmodel.TaskListViewModel
 
@@ -49,6 +50,12 @@ fun AppNavigation(
                 onEditTask = { task ->
                     selectedTask = task
                     navController.navigate("edit_task")
+                },
+
+
+                onViewTask = { task ->
+                    selectedTask = task
+                    navController.navigate("task_detail")
                 },
 
                 onDeleteTask = { task ->
@@ -118,12 +125,32 @@ fun AppNavigation(
                             dueDate = dueDate
                         )
 
+                        // Actualización de Datos usando ViewModel
                         viewModel.updateTask(updatedTask)
+                        selectedTask = updatedTask
                         navController.popBackStack()
                     }
                 )
             }
         }
+
+
+        composable("task_detail") {
+            val task = selectedTask
+
+            if (task != null) {
+                TaskDetailScreen(
+                    task = task,
+                    onBack = {
+                        navController.popBackStack()
+                    },
+                    onEdit = {
+                        navController.navigate("edit_task")
+                    }
+                )
+            }
+        }
+
     }
 
     // Confirmación antes de eliminar una tarea.
