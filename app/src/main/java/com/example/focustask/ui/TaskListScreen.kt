@@ -119,20 +119,20 @@ fun TaskListScreen(
         mutableStateOf(false)
     }
 
-    var draftCategory by rememberSaveable {
-        mutableStateOf<String?>(null)
+    var draftCategories by remember {
+        mutableStateOf(emptySet<String>())
     }
 
-    var draftDate by rememberSaveable {
-        mutableStateOf(TaskDateFilter.ANY)
+    var draftStatuses by remember {
+        mutableStateOf(emptySet<TaskStatusFilter>())
     }
 
-    var draftPriority by rememberSaveable {
-        mutableStateOf(TaskPriorityFilter.ALL)
+    var draftDates by remember {
+        mutableStateOf(emptySet<TaskDateFilter>())
     }
 
-    var draftStatus by rememberSaveable {
-        mutableStateOf(TaskStatusFilter.ALL)
+    var draftPriorities by remember {
+        mutableStateOf(emptySet<TaskPriorityFilter>())
     }
 
     var isHeaderExpanded by rememberSaveable {
@@ -313,10 +313,10 @@ fun TaskListScreen(
                     ) {
                         OutlinedButton(
                             onClick = {
-                                draftCategory = uiState.selectedCategory
-                                draftDate = uiState.selectedDate
-                                draftPriority = uiState.selectedPriority
-                                draftStatus = uiState.selectedStatus
+                                draftCategories = uiState.selectedCategories
+                                draftDates = uiState.selectedDates
+                                draftPriorities = uiState.selectedPriorities
+                                draftStatuses = uiState.selectedStatuses
                                 showFiltersDialog = true
                             },
                             modifier = Modifier.fillMaxWidth(),
@@ -331,54 +331,66 @@ fun TaskListScreen(
                             )
                         }
 
-                        val activeFilters = buildList {
-                            if (uiState.selectedCategory != null) {
-                                add(
-                                    uiState.selectedCategory!! to {
-                                        viewModel.setCategory(null)
-                                    }
-                                )
+                        val activeFilters = buildList<Pair<String, () -> Unit>> {
+                            uiState.selectedCategories.forEach { category ->
+                                add(category to {
+                                    viewModel.setCategories(
+                                        uiState.selectedCategories - category
+                                    )
+                                })
                             }
 
-                            if (uiState.selectedDate != TaskDateFilter.ANY) {
-                                val label = when (uiState.selectedDate) {
+                            uiState.selectedStatuses.forEach { status ->
+                                val label = when (status) {
+                                    TaskStatusFilter.ALL -> "Todos los estados"
+                                    TaskStatusFilter.PENDING -> "Pendientes"
+                                    TaskStatusFilter.COMPLETED -> "Completadas"
+                                }
+
+                                if (status != TaskStatusFilter.ALL) {
+                                    add(label to {
+                                        viewModel.setStatusFilters(
+                                            uiState.selectedStatuses - status
+                                        )
+                                    })
+                                }
+                            }
+
+                            uiState.selectedDates.forEach { date ->
+                                val label = when (date) {
+                                    TaskDateFilter.ANY -> "Cualquier fecha"
                                     TaskDateFilter.TODAY -> "Hoy"
                                     TaskDateFilter.TOMORROW -> "Mañana"
                                     TaskDateFilter.THIS_WEEK -> "Esta semana"
                                     TaskDateFilter.THIS_MONTH -> "Este mes"
                                     TaskDateFilter.NO_DATE -> "Sin fecha"
-                                    TaskDateFilter.ANY -> ""
                                 }
 
-                                add(label to {
-                                    viewModel.setDateFilter(TaskDateFilter.ANY)
-                                })
+                                if (date != TaskDateFilter.ANY) {
+                                    add(label to {
+                                        viewModel.setDateFilters(
+                                            uiState.selectedDates - date
+                                        )
+                                    })
+                                }
                             }
 
-                            if (uiState.selectedPriority != TaskPriorityFilter.ALL) {
-                                val label = when (uiState.selectedPriority) {
+                            uiState.selectedPriorities.forEach { priority ->
+                                val label = when (priority) {
+                                    TaskPriorityFilter.ALL -> "Todas las prioridades"
                                     TaskPriorityFilter.LOW -> "Baja"
                                     TaskPriorityFilter.NORMAL -> "Normal"
                                     TaskPriorityFilter.MEDIUM -> "Media"
                                     TaskPriorityFilter.HIGH -> "Alta"
-                                    TaskPriorityFilter.ALL -> ""
                                 }
 
-                                add(label to {
-                                    viewModel.setPriorityFilter(TaskPriorityFilter.ALL)
-                                })
-                            }
-
-                            if (uiState.selectedStatus != TaskStatusFilter.ALL) {
-                                val label = when (uiState.selectedStatus) {
-                                    TaskStatusFilter.PENDING -> "Pendientes"
-                                    TaskStatusFilter.COMPLETED -> "Completadas"
-                                    TaskStatusFilter.ALL -> ""
+                                if (priority != TaskPriorityFilter.ALL) {
+                                    add(label to {
+                                        viewModel.setPriorityFilters(
+                                            uiState.selectedPriorities - priority
+                                        )
+                                    })
                                 }
-
-                                add(label to {
-                                    viewModel.setStatusFilter(TaskStatusFilter.ALL)
-                                })
                             }
                         }
 
@@ -561,42 +573,42 @@ fun TaskListScreen(
                     // Categoría
                     Text(
                         text = "Categoría",
-                        color = Turquoise,
-                        fontFamily = QuicksandFamily,
-                        fontWeight = FontWeight.Bold
+                        style = MaterialTheme.typography.titleSmall
                     )
 
-                    val categories = listOf(
-                        null to "Todas",
-                        "Universidad" to "Universidad",
-                        "Estudio" to "Estudio",
-                        "Proyecto" to "Proyecto",
-                        "Personal" to "Personal"
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = draftCategories.isEmpty(),
+                            onCheckedChange = {
+                                draftCategories = emptySet()
+                            }
+                        )
+                        Text("Todas las categorías")
+                    }
 
-                    categories.forEach { (category, label) ->
+                    listOf(
+                        "Universidad",
+                        "Estudio",
+                        "Proyecto",
+                        "Personal"
+                    ).forEach { category ->
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    draftCategory = category
-                                },
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            RadioButton(
-                                selected = draftCategory == category,
-                                onClick = {
-                                    draftCategory = category
-                                },
-                                colors = RadioButtonDefaults.colors(
-                                    selectedColor = Turquoise
-                                )
+                            Checkbox(
+                                checked = category in draftCategories,
+                                onCheckedChange = { checked ->
+                                    draftCategories =
+                                        if (checked) {
+                                            draftCategories + category
+                                        } else {
+                                            draftCategories - category
+                                        }
+                                }
                             )
-
-                            Text(
-                                text = label,
-                                color = MainText
-                            )
+                            Text(category)
                         }
                     }
 
@@ -605,40 +617,40 @@ fun TaskListScreen(
                     // Estado
                     Text(
                         text = "Estado",
-                        color = Turquoise,
-                        fontFamily = QuicksandFamily,
-                        fontWeight = FontWeight.Bold
+                        style = MaterialTheme.typography.titleSmall
                     )
 
-                    val statuses = listOf(
-                        TaskStatusFilter.ALL to "Todas",
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = draftStatuses.isEmpty(),
+                            onCheckedChange = {
+                                draftStatuses = emptySet()
+                            }
+                        )
+                        Text("Todos los estados")
+                    }
+
+                    listOf(
                         TaskStatusFilter.PENDING to "Pendientes",
                         TaskStatusFilter.COMPLETED to "Completadas"
-                    )
-
-                    statuses.forEach { (status, label) ->
+                    ).forEach { (status, label) ->
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    draftStatus = status
-                                },
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            RadioButton(
-                                selected = draftStatus == status,
-                                onClick = {
-                                    draftStatus = status
-                                },
-                                colors = RadioButtonDefaults.colors(
-                                    selectedColor = Turquoise
-                                )
+                            Checkbox(
+                                checked = status in draftStatuses,
+                                onCheckedChange = { checked ->
+                                    draftStatuses =
+                                        if (checked) {
+                                            draftStatuses + status
+                                        } else {
+                                            draftStatuses - status
+                                        }
+                                }
                             )
-
-                            Text(
-                                text = label,
-                                color = MainText
-                            )
+                            Text(label)
                         }
                     }
 
@@ -646,44 +658,44 @@ fun TaskListScreen(
 
                     // Fecha
                     Text(
-                        text = "Fecha de entrega",
-                        color = Turquoise,
-                        fontFamily = QuicksandFamily,
-                        fontWeight = FontWeight.Bold
+                        text = "Fecha",
+                        style = MaterialTheme.typography.titleSmall
                     )
 
-                    val dates = listOf(
-                        TaskDateFilter.ANY to "Cualquier fecha",
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = draftDates.isEmpty(),
+                            onCheckedChange = {
+                                draftDates = emptySet()
+                            }
+                        )
+                        Text("Cualquier fecha")
+                    }
+
+                    listOf(
                         TaskDateFilter.TODAY to "Hoy",
                         TaskDateFilter.TOMORROW to "Mañana",
                         TaskDateFilter.THIS_WEEK to "Esta semana",
                         TaskDateFilter.THIS_MONTH to "Este mes",
                         TaskDateFilter.NO_DATE to "Sin fecha"
-                    )
-
-                    dates.forEach { (date, label) ->
+                    ).forEach { (date, label) ->
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    draftDate = date
-                                },
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            RadioButton(
-                                selected = draftDate == date,
-                                onClick = {
-                                    draftDate = date
-                                },
-                                colors = RadioButtonDefaults.colors(
-                                    selectedColor = Turquoise
-                                )
+                            Checkbox(
+                                checked = date in draftDates,
+                                onCheckedChange = { checked ->
+                                    draftDates =
+                                        if (checked) {
+                                            draftDates + date
+                                        } else {
+                                            draftDates - date
+                                        }
+                                }
                             )
-
-                            Text(
-                                text = label,
-                                color = MainText
-                            )
+                            Text(label)
                         }
                     }
 
@@ -692,42 +704,42 @@ fun TaskListScreen(
                     // Prioridad
                     Text(
                         text = "Prioridad",
-                        color = Turquoise,
-                        fontFamily = QuicksandFamily,
-                        fontWeight = FontWeight.Bold
+                        style = MaterialTheme.typography.titleSmall
                     )
 
-                    val priorities = listOf(
-                        TaskPriorityFilter.ALL to "Todas",
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = draftPriorities.isEmpty(),
+                            onCheckedChange = {
+                                draftPriorities = emptySet()
+                            }
+                        )
+                        Text("Todas las prioridades")
+                    }
+
+                    listOf(
                         TaskPriorityFilter.LOW to "Baja",
                         TaskPriorityFilter.NORMAL to "Normal",
                         TaskPriorityFilter.MEDIUM to "Media",
                         TaskPriorityFilter.HIGH to "Alta"
-                    )
-
-                    priorities.forEach { (priority, label) ->
+                    ).forEach { (priority, label) ->
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    draftPriority = priority
-                                },
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            RadioButton(
-                                selected = draftPriority == priority,
-                                onClick = {
-                                    draftPriority = priority
-                                },
-                                colors = RadioButtonDefaults.colors(
-                                    selectedColor = Turquoise
-                                )
+                            Checkbox(
+                                checked = priority in draftPriorities,
+                                onCheckedChange = { checked ->
+                                    draftPriorities =
+                                        if (checked) {
+                                            draftPriorities + priority
+                                        } else {
+                                            draftPriorities - priority
+                                        }
+                                }
                             )
-
-                            Text(
-                                text = label,
-                                color = MainText
-                            )
+                            Text(label)
                         }
                     }
                 }
@@ -735,10 +747,10 @@ fun TaskListScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.setCategory(draftCategory)
-                        viewModel.setDateFilter(draftDate)
-                        viewModel.setPriorityFilter(draftPriority)
-                        viewModel.setStatusFilter(draftStatus)
+                        viewModel.setCategories(draftCategories)
+                        viewModel.setStatusFilters(draftStatuses)
+                        viewModel.setDateFilters(draftDates)
+                        viewModel.setPriorityFilters(draftPriorities)
 
                         showFiltersDialog = false
                     }
@@ -755,15 +767,15 @@ fun TaskListScreen(
                 ) {
                     TextButton(
                         onClick = {
-                            draftCategory = null
-                            draftDate = TaskDateFilter.ANY
-                            draftPriority = TaskPriorityFilter.ALL
-                            draftStatus = TaskStatusFilter.ALL
+                            draftCategories = emptySet()
+                            draftStatuses = emptySet()
+                            draftDates = emptySet()
+                            draftPriorities = emptySet()
 
-                            viewModel.setCategory(null)
-                            viewModel.setDateFilter(TaskDateFilter.ANY)
-                            viewModel.setPriorityFilter(TaskPriorityFilter.ALL)
-                            viewModel.setStatusFilter(TaskStatusFilter.ALL)
+                            viewModel.setCategories(emptySet())
+                            viewModel.setStatusFilters(emptySet())
+                            viewModel.setDateFilters(emptySet())
+                            viewModel.setPriorityFilters(emptySet())
 
                             showFiltersDialog = false
                         }

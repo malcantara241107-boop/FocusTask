@@ -34,10 +34,10 @@ data class TaskListUiState(
     val searchQuery: String = "",
 
     //Filtros
-    val selectedCategory: String? = null,
-    val selectedStatus: TaskStatusFilter = TaskStatusFilter.ALL,
-    val selectedDate: TaskDateFilter = TaskDateFilter.ANY,
-    val selectedPriority: TaskPriorityFilter = TaskPriorityFilter.ALL,
+    val selectedCategories: Set<String> = emptySet(),
+    val selectedStatuses: Set<TaskStatusFilter> = emptySet(),
+    val selectedDates: Set<TaskDateFilter> = emptySet(),
+    val selectedPriorities: Set<TaskPriorityFilter> = emptySet(),
 
     val sortOption: TaskSortOption = TaskSortOption.DUE_DATE,
     val isLoading: Boolean = true,

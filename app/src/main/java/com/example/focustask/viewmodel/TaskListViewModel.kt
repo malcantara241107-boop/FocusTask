@@ -70,43 +70,60 @@ class TaskListViewModel(
                 )
             }
             .filter { task ->
-                state.selectedCategory == null ||
-                        task.category == state.selectedCategory
+                state.selectedCategories.isEmpty() ||
+                        task.category in state.selectedCategories
             }
             .filter { task ->
-                when (state.selectedStatus) {
-                    TaskStatusFilter.ALL -> true
-                    TaskStatusFilter.PENDING -> !task.isCompleted
-                    TaskStatusFilter.COMPLETED -> task.isCompleted
-                }
+                state.selectedStatuses.isEmpty() ||
+                        state.selectedStatuses.any { status ->
+                            when (status) {
+                                TaskStatusFilter.ALL -> true
+                                TaskStatusFilter.PENDING -> !task.isCompleted
+                                TaskStatusFilter.COMPLETED -> task.isCompleted
+                            }
+                        }
             }
             .filter { task ->
-                when (state.selectedPriority) {
-                    TaskPriorityFilter.ALL -> true
-                    TaskPriorityFilter.LOW -> task.priority == 0
-                    TaskPriorityFilter.NORMAL -> task.priority == 1
-                    TaskPriorityFilter.MEDIUM -> task.priority == 2
-                    TaskPriorityFilter.HIGH -> task.priority == 3
-                }
+                state.selectedPriorities.isEmpty() ||
+                        state.selectedPriorities.any { priority ->
+                            when (priority) {
+                                TaskPriorityFilter.ALL -> true
+                                TaskPriorityFilter.LOW -> task.priority == 0
+                                TaskPriorityFilter.NORMAL -> task.priority == 1
+                                TaskPriorityFilter.MEDIUM -> task.priority == 2
+                                TaskPriorityFilter.HIGH -> task.priority == 3
+                            }
+                        }
             }
             .filter { task ->
-                val today = LocalDate.now()
+                val today = java.time.LocalDate.now()
                 val taskDate = task.dueDate?.let {
-                    LocalDate.parse(it, DateTimeFormatter.ISO_LOCAL_DATE)
+                    runCatching { java.time.LocalDate.parse(it) }.getOrNull()
                 }
 
-                when (state.selectedDate) {
-                    TaskDateFilter.ANY -> true
-                    TaskDateFilter.NO_DATE -> taskDate == null
-                    TaskDateFilter.TODAY -> taskDate == today
-                    TaskDateFilter.TOMORROW -> taskDate == today.plusDays(1)
-                    TaskDateFilter.THIS_WEEK -> taskDate != null &&
-                            !taskDate.isBefore(today.with(DayOfWeek.MONDAY)) &&
-                            !taskDate.isAfter(today.with(DayOfWeek.MONDAY).plusDays(6))
-                    TaskDateFilter.THIS_MONTH -> taskDate != null &&
-                            taskDate.year == today.year &&
-                            taskDate.month == today.month
-                }
+                state.selectedDates.isEmpty() ||
+                        state.selectedDates.any { date ->
+                            when (date) {
+                                TaskDateFilter.ANY -> true
+                                TaskDateFilter.NO_DATE -> taskDate == null
+                                TaskDateFilter.TODAY -> taskDate == today
+                                TaskDateFilter.TOMORROW -> taskDate == today.plusDays(1)
+                                TaskDateFilter.THIS_WEEK -> {
+                                    val monday = today.with(
+                                        java.time.temporal.TemporalAdjusters
+                                            .previousOrSame(java.time.DayOfWeek.MONDAY)
+                                    )
+                                    taskDate != null &&
+                                            !taskDate.isBefore(monday) &&
+                                            !taskDate.isAfter(monday.plusDays(6))
+                                }
+                                TaskDateFilter.THIS_MONTH -> {
+                                    taskDate != null &&
+                                            taskDate.year == today.year &&
+                                            taskDate.month == today.month
+                                }
+                            }
+                        }
             }
             .let { filteredTasks ->
                 when (state.sortOption) {
@@ -123,27 +140,31 @@ class TaskListViewModel(
         _uiState.update { it.copy(searchQuery = query) }
     }
 
-    fun setCategory(category: String?) {
-        _uiState.update { it.copy(selectedCategory = category) }
+    fun setCategories(categories: Set<String>) {
+        _uiState.update {
+            it.copy(selectedCategories = categories)
+        }
     }
 
-    fun setStatusFilter(status: TaskStatusFilter) {
-        _uiState.update { it.copy(selectedStatus = status) }
+    fun setStatusFilters(statuses: Set<TaskStatusFilter>) {
+        _uiState.update {
+            it.copy(selectedStatuses = statuses)
+        }
     }
 
     fun setSortOption(option: TaskSortOption) {
         _uiState.update { it.copy(sortOption = option) }
     }
 
-    fun setDateFilter(date: TaskDateFilter) {
+    fun setDateFilters(dates: Set<TaskDateFilter>) {
         _uiState.update {
-            it.copy(selectedDate = date)
+            it.copy(selectedDates = dates)
         }
     }
 
-    fun setPriorityFilter(priority: TaskPriorityFilter) {
+    fun setPriorityFilters(priorities: Set<TaskPriorityFilter>) {
         _uiState.update {
-            it.copy(selectedPriority = priority)
+            it.copy(selectedPriorities = priorities)
         }
     }
 
